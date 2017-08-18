@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="lzma.js"></script>
+<script src="./jquery.min.js"></script>
+<style>
+    body {
+        background-color: #000;
+    }
+</style>
+<body>
+<button class="str">转码</button>
+<button class="byte">解码</button>
+<textarea class="content" style="width: 500px;height: 300px"></textarea>
+</body>
+<script>
+	var str = '{    "tables": [        {            "id": "2735b77052d64a5ca4498324b963eb39",            "parentId": "ee61a8ad2cde4b4dac7b8c61979a41cd",            "name": "g",            "status": 3,            "open": true,            "attr": "menuC",            "drop": false,            "show": false,            "click": true,            "existsTab": 1,            "hasDefault": false,            "children": []        }    ]}';
+
+	$('.content').text(str);
+
+	var my_lzma = new LZMA('./lzma_worker.js');
+
+	function convert_formated_hex_to_bytes(hex_str) {
+		var count = 0,
+			hex_arr,
+			hex_data = [],
+			hex_len,
+			i;
+
+		if (hex_str.trim() == '') return [];
+
+		/// Check for invalid hex characters.
+		if (/[^0-9a-fA-F\s]/.test(hex_str)) {
+			return false;
+		}
+
+		hex_arr = hex_str.split(/([0-9a-fA-F]+)/g);
+		hex_len = hex_arr.length;
+
+		for (i = 0; i < hex_len; ++i) {
+			if (hex_arr[i].trim() == '') {
+				continue;
+			}
+			hex_data[count++] = parseInt(hex_arr[i], 16);
+		}
+
+		return hex_data;
+	}
+
+	function convert_to_formated_hex(byte_arr) {
+		var hex_str = '',
+			i,
+			len,
+			tmp_hex;
+
+		function is_array(input) {
+			return typeof(input) === 'object' && (input instanceof Array);
+		}
+
+		if (!is_array(byte_arr)) {
+			return false;
+		}
+
+		len = byte_arr.length;
+
+		for (i = 0; i < len; ++i) {
+			if (byte_arr[i] < 0) {
+				byte_arr[i] = byte_arr[i] + 256;
+			}
+			if (byte_arr[i] === undefined) {
+				alert('Boom ' + i);
+				byte_arr[i] = 0;
+			}
+			tmp_hex = byte_arr[i].toString(16);
+
+			// Add leading zero.
+			if (tmp_hex.length == 1) tmp_hex = '0' + tmp_hex;
+
+			if ((i + 1) % 16 === 0) {
+				tmp_hex += '\n';
+			} else {
+				tmp_hex += ' ';
+			}
+
+			hex_str += tmp_hex;
+		}
+
+		return hex_str.trim();
+	}
+
+	var my_lzma = new LZMA('./lzma_worker.js');
+	var toByte, toStr;
+	$('.str').on('click', function () {
+		my_lzma.compress(str, 1, function (result) {
+			if (result === false) {
+				alert('An error occurred during LZMA compression.');
+				return;
+			}
+			toByte = convert_to_formated_hex(result);
+			$('.content').text(toByte);
+		}, function (percent) {});
+	});
+
+	$('.byte').on('click', function () {
+		var byte_arr = convert_formated_hex_to_bytes(toByte);
+
+		if (byte_arr == false) {
+			alert('invalid compressed input');
+			return false;
+		}
+
+		my_lzma.decompress(byte_arr, function (result) {
+
+			if (result === false) {
+				alert('An error occurred during decompression.');
+				return;
+			}
+
+			toStr = result;
+			$('.content').text(toStr);
+		}, function (percent) {});
+	});
+
+</script>
